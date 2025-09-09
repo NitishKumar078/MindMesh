@@ -3,11 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Eye, EyeOff, KeyRound, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { span } from "framer-motion/client";
-
-const PROVIDERS = ["OpenAI", "Gemini", "Perplexity"] as const;
-
-type Provider = (typeof PROVIDERS)[number];
+import { useRouter } from "next/navigation";
+import { Provider, AIPROVIDERS } from "@/app/lib/types";
 
 export default function Modoleinfo() {
   const [apiKey, setApiKey] = useState("");
@@ -15,6 +12,7 @@ export default function Modoleinfo() {
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const storedProvider =
@@ -30,7 +28,10 @@ export default function Modoleinfo() {
     try {
       localStorage.setItem("aiProvider", provider);
       localStorage.setItem("aiApiKey", apiKey);
+      localStorage.setItem("chat", "true");
       setSavedAt(new Date().toLocaleTimeString());
+
+      router.push("/chat");
     } finally {
       setSaving(false);
     }
@@ -104,7 +105,7 @@ export default function Modoleinfo() {
                   "text-neutral-900 dark:text-white"
                 )}
               >
-                {PROVIDERS.map((p) => (
+                {AIPROVIDERS.map((p) => (
                   <option
                     key={p}
                     value={p}
@@ -136,7 +137,11 @@ export default function Modoleinfo() {
                   <Check className="h-4 w-4" />
                   <span>
                     {" "}
-                    {savedAt ? <span>Saved ✅</span> : <span>save </span>}
+                    {savedAt ? (
+                      <span>Edit & continue... ✅</span>
+                    ) : (
+                      <span>save </span>
+                    )}
                   </span>
                 </>
               )}
