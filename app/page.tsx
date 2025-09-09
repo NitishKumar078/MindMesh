@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-
+import Modoleinfo from "@/components/ui/Modoleinfo";
 import { Particles } from "@/components/ui/particles";
 import { Component } from "@/components/ui/vapour-text-effect";
 
@@ -15,7 +15,14 @@ export default function Home() {
   }, [theme]);
 
   return (
-    <div className="relative flex h-screen w-screen flex-col items-center justify-center overflow-hidden rounded-lg border bg-background md:shadow-xl">
+    <div className="relative flex h-full w-full flex-col items-center justify-center  rounded-lg border bg-background md:shadow-xl">
+      <Particles
+        className="fixed inset-0"
+        quantity={100}
+        ease={80}
+        color={color}
+        refresh
+      />
       <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-300/80 bg-clip-text text-center text-6xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
         Welcome to Mindmesh
       </span>
@@ -27,13 +34,7 @@ export default function Home() {
       <Component />
       {/* </div> */}
 
-      <Particles
-        className="absolute inset-0"
-        quantity={100}
-        ease={80}
-        color={color}
-        refresh
-      />
+      <Modoleinfo />
     </div>
   );
 }

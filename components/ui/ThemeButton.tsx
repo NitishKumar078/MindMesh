@@ -23,7 +23,7 @@ export default function ThemeButton() {
   return (
     <button
       onClick={handleThemeChange}
-      className="absolute top-4 right-4 z-10 cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="absolute border-black border border-l-2 top-4 right-4 z-10 cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
     >
       {theme === "dark" ? (
         <Sun className="h-5 w-5" />
