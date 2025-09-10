@@ -130,7 +130,19 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 Textarea.displayName = "Textarea";
 
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
+// interface AnimatedAIChatProps {
+//   AIProvider: string | null;
+// }
+
 export function AnimatedAIChat() {
+  const AIProvider = localStorage.getItem("aiProvider");
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -139,6 +151,7 @@ export function AnimatedAIChat() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [recentCommand, setRecentCommand] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 60,
     maxHeight: 200,
@@ -250,23 +263,83 @@ export function AnimatedAIChat() {
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (value.trim()) {
-      startTransition(() => {
-        setIsTyping(true);
-        setTimeout(() => {
+      setIsTyping(true);
+
+      try {
+        // Get stored settings from localStorage
+        const provider = localStorage.getItem("aiProvider") || "Perplexity";
+        const apiKey = localStorage.getItem("aiApiKey");
+
+        if (!apiKey) {
+          alert("Please configure your API key in settings first.");
           setIsTyping(false);
-          setValue("");
-          adjustHeight(true);
-        }, 3000);
-      });
+          return;
+        }
+
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: value.trim(),
+            provider: provider,
+            apiKey: apiKey,
+            messages: [], // You can extend this to maintain conversation history
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        // Handle successful response
+        console.log("AI Response:", data.response);
+
+        // Add user message to chat history
+        const userMessage: ChatMessage = {
+          id: Date.now().toString(),
+          role: "user",
+          content: value.trim(),
+          timestamp: new Date(),
+        };
+
+        // Add AI response to chat history
+        const aiMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.response,
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, userMessage, aiMessage]);
+      } catch (error) {
+        console.error("Error sending message:", error);
+        alert(
+          `Error: ${
+            error instanceof Error ? error.message : "Failed to send message"
+          }`
+        );
+      } finally {
+        setIsTyping(false);
+        setValue("");
+        adjustHeight(true);
+      }
     }
   };
 
-  const handleAttachFile = () => {
-    const mockFileName = `file-${Math.floor(Math.random() * 1000)}.pdf`;
-    setAttachments((prev) => [...prev, mockFileName]);
-  };
+  // const handleAttachFile = () => {
+  //   const mockFileName = `file-${Math.floor(Math.random() * 1000)}.pdf`;
+  //   setAttachments((prev) => [...prev, mockFileName]);
+  // };
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
@@ -282,7 +355,7 @@ export function AnimatedAIChat() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col w-full items-center justify-center  dark:bg-slate-800 bg-slate-200  p-6 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col w-full items-center justify-start  dark:bg-slate-800 bg-slate-200  p-6 relative">
       <div className="absolute inset-0 w-full h-full overflow-hidden">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full mix-blend-normal filter blur-[128px] animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full mix-blend-normal filter blur-[128px] animate-pulse delay-700" />
@@ -295,7 +368,7 @@ export function AnimatedAIChat() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <div className="text-center dark:text-white text-black space-y-3">
+          <div className="text-center dark:text-white text-black space-y-3 mb-6">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -318,12 +391,49 @@ export function AnimatedAIChat() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              Type a command or ask a question
+              Type a command or ask a question {AIProvider}
             </motion.p>
           </div>
 
+          {/* Chat History */}
+          {messages.length > 0 && (
+            <motion.div
+              className="space-y-4 max-h-full pb-28"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  className={cn(
+                    "flex",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-lg px-4 py-2 text-sm",
+                      message.role === "user"
+                        ? "bg-white text-neutral-900 dark:bg-white/10 dark:text-white"
+                        : "bg-black/5 text-neutral-800 dark:bg-white/5 dark:text-white/90"
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-xs opacity-60 mt-1">
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+
           <motion.div
-            className="relative backdrop-blur-2xl bg-white/[0.02] rounded-2xl border border-white/[0.05] shadow-2xl"
+            className="relative backdrop-blur-2xl bg-white/[0.02] rounded-2xl border border-white/[0.05] shadow-2xl mt-6"
             initial={{ scale: 0.98 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.1 }}
@@ -380,7 +490,7 @@ export function AnimatedAIChat() {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
-                placeholder="Ask zap a question..."
+                placeholder={`Ask ${AIProvider} a question...`}
                 containerClassName="w-full"
                 className={cn(
                   "w-full px-4 py-3",
@@ -430,7 +540,7 @@ export function AnimatedAIChat() {
 
             <div className="p-4 border-t border-white/[0.05] flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <motion.button
+                {/* <motion.button
                   type="button"
                   onClick={handleAttachFile}
                   whileTap={{ scale: 0.94 }}
@@ -441,7 +551,7 @@ export function AnimatedAIChat() {
                     className="absolute inset-0 bg-white/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     layoutId="button-highlight"
                   />
-                </motion.button>
+                </motion.button> */}
                 <motion.button
                   type="button"
                   data-command-button
