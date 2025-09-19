@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import getFavicons from "favicon-extractor";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -45,7 +46,10 @@ async function callPerplexityAPI(
   }
 
   const data = await response.json();
-  return data.choices[0]?.message?.content || "No response received";
+  // console.log(data.citations);
+  data.icons = await getFavicons(data.citations);
+  //return data.choices[0]?.message?.content || "No response received";
+  return data || "No response received";
 }
 
 async function callOpenAIAPI(
@@ -86,8 +90,8 @@ async function callOpenAIAPI(
 
 async function callGeminiAPI(
   message: string,
-  apiKey: string,
-  messages: ChatMessage[] = []
+  apiKey: string
+  // messages: ChatMessage[] = []
 ) {
   // Note: This is a simplified implementation. Gemini API structure may differ
   const model = "gemini-pro";
@@ -153,7 +157,7 @@ export async function POST(request: NextRequest) {
         response = await callOpenAIAPI(message, apiKey, messages);
         break;
       case "Gemini":
-        response = await callGeminiAPI(message, apiKey, messages);
+        response = await callGeminiAPI(message, apiKey);
         break;
       default:
         return new Response(JSON.stringify({ error: "Unsupported provider" }), {

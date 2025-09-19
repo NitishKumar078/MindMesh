@@ -1,17 +1,11 @@
 "use client";
-
-import { useEffect, useRef, useCallback, useTransition } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import type { BatchResult } from "favicon-extractor";
 import {
   ImageIcon,
-  FileUp,
-  Figma,
   MonitorIcon,
-  CircleUserRound,
-  ArrowUpIcon,
-  Paperclip,
-  PlusIcon,
   SendIcon,
   XIcon,
   LoaderIcon,
@@ -20,10 +14,19 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as React from "react";
+import { AnimatedTooltip } from "./animated-tooltip";
 
 interface UseAutoResizeTextareaProps {
   minHeight: number;
   maxHeight?: number;
+}
+
+interface faviconObject {
+  id: string;
+  hostname?: string;
+  url: string;
+  favicon: string;
+  success: boolean;
 }
 
 function useAutoResizeTextarea({
@@ -146,10 +149,8 @@ export function AnimatedAIChat() {
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [activeSuggestion, setActiveSuggestion] = useState<number>(-1);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [recentCommand, setRecentCommand] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
@@ -158,27 +159,31 @@ export function AnimatedAIChat() {
   });
   const [inputFocused, setInputFocused] = useState(false);
   const commandPaletteRef = useRef<HTMLDivElement>(null);
+  const [sourcesmap, setsourcesmap] = useState([]);
 
-  const commandSuggestions: CommandSuggestion[] = [
-    {
-      icon: <ImageIcon className="w-4 h-4" />,
-      label: "Clone UI",
-      description: "Generate a UI from a screenshot",
-      prefix: "/clone",
-    },
-    {
-      icon: <MonitorIcon className="w-4 h-4" />,
-      label: "Create Page",
-      description: "Generate a new web page",
-      prefix: "/page",
-    },
-    {
-      icon: <Sparkles className="w-4 h-4" />,
-      label: "Improve",
-      description: "Improve existing UI design",
-      prefix: "/improve",
-    },
-  ];
+  const commandSuggestions: CommandSuggestion[] = useMemo(
+    () => [
+      {
+        icon: <ImageIcon className="w-4 h-4" />,
+        label: "Clone UI",
+        description: "Generate a UI from a screenshot",
+        prefix: "/clone",
+      },
+      {
+        icon: <MonitorIcon className="w-4 h-4" />,
+        label: "Create Page",
+        description: "Generate a new web page",
+        prefix: "/page",
+      },
+      {
+        icon: <Sparkles className="w-4 h-4" />,
+        label: "Improve",
+        description: "Improve existing UI design",
+        prefix: "/improve",
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (value.startsWith("/") && !value.includes(" ")) {
@@ -196,7 +201,7 @@ export function AnimatedAIChat() {
     } else {
       setShowCommandPalette(false);
     }
-  }, [value]);
+  }, [value, commandSuggestions]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -247,9 +252,6 @@ export function AnimatedAIChat() {
           const selectedCommand = commandSuggestions[activeSuggestion];
           setValue(selectedCommand.prefix + " ");
           setShowCommandPalette(false);
-
-          setRecentCommand(selectedCommand.label);
-          setTimeout(() => setRecentCommand(null), 3500);
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -316,9 +318,19 @@ export function AnimatedAIChat() {
         const aiMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data.response,
+          content: data.response.choices[0]?.message?.content,
           timestamp: new Date(),
         };
+
+        // Ensure each icon object has an 'id' property set to its index
+        const sources = data.response.icons.map(
+          (icon: BatchResult, index: number) => ({
+            ...icon,
+            id: index,
+          })
+        );
+        console.log(sources);
+        setsourcesmap(sources);
 
         setMessages((prev) => [...prev, userMessage, aiMessage]);
       } catch (error) {
@@ -350,8 +362,7 @@ export function AnimatedAIChat() {
     setValue(selectedCommand.prefix + " ");
     setShowCommandPalette(false);
 
-    setRecentCommand(selectedCommand.label);
-    setTimeout(() => setRecentCommand(null), 2000);
+    // Command selected
   };
 
   return (
@@ -423,9 +434,16 @@ export function AnimatedAIChat() {
                     )}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
-                    <p className="text-xs opacity-60 mt-1">
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-[11px] text-neutral-500 dark:text-white/50">
+                      <span className="px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/5">
+                        {message.timestamp.toLocaleTimeString()}
+                      </span>
+                      {message.role !== "user" && (
+                        <div className="flex items-center">
+                          <AnimatedTooltip items={sourcesmap} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -639,7 +657,7 @@ export function AnimatedAIChat() {
             <div className="flex items-center gap-3">
               <div className="w-8 h-7 rounded-full bg-white/[0.05] flex items-center justify-center text-center">
                 <span className="text-xs font-medium text-white/90 mb-0.5">
-                  zap
+                  {AIProvider}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-white/70">
@@ -697,49 +715,7 @@ function TypingDots() {
   );
 }
 
-interface ActionButtonProps {
-  icon: React.ReactNode;
-  label: string;
-}
-
-function ActionButton({ icon, label }: ActionButtonProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <motion.button
-      type="button"
-      whileHover={{ scale: 1.05, y: -2 }}
-      whileTap={{ scale: 0.97 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      className="flex items-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 rounded-full border border-neutral-800 text-neutral-400 hover:text-white transition-all relative overflow-hidden group"
-    >
-      <div className="relative z-10 flex items-center gap-2">
-        {icon}
-        <span className="text-xs relative z-10">{label}</span>
-      </div>
-
-      <AnimatePresence>
-        {isHovered && (
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-indigo-500/10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          />
-        )}
-      </AnimatePresence>
-
-      <motion.span
-        className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500"
-        initial={{ width: 0 }}
-        whileHover={{ width: "100%" }}
-        transition={{ duration: 0.3 }}
-      />
-    </motion.button>
-  );
-}
+// Removed unused ActionButton
 
 const rippleKeyframes = `
 @keyframes ripple {
