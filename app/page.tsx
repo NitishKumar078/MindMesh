@@ -15,7 +15,7 @@ export default function Home() {
   }, [theme]);
 
   return (
-    <div className="relative flex h-full w-full flex-col items-center justify-center  rounded-lg border bg-background md:shadow-xl">
+    <div className="relative flex h-screen w-full flex-col items-center justify-center  rounded-lg border bg-background md:shadow-xl">
       <Particles
         className="fixed inset-0"
         quantity={100}

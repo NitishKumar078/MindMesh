@@ -1,13 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Image from "next/image";
-import {
-  motion,
-  useTransform,
-  AnimatePresence,
-  useMotionValue,
-  useSpring,
-} from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export const AnimatedTooltip = ({
@@ -23,16 +17,8 @@ export const AnimatedTooltip = ({
   className?: string;
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const springConfig = { stiffness: 100, damping: 5 };
   const x = useMotionValue(0);
-  const rotate = useSpring(
-    useTransform(x, [-100, 100], [-45, 45]),
-    springConfig
-  );
-  const translateX = useSpring(
-    useTransform(x, [-100, 100], [-50, 50]),
-    springConfig
-  );
+
   const handleMouseMove = (
     event: React.MouseEvent<HTMLImageElement, MouseEvent>
   ) => {

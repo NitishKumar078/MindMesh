@@ -428,7 +428,7 @@ export default function VaporizeTextCycle({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [wrapperRef.current]);
+  }, [alignment, color, font, texts]);
 
   // Initial size detection
   useEffect(() => {
@@ -472,6 +472,7 @@ const SeoElement = memo(
     return createElement(safeTag, { style }, texts?.join(" ") ?? "");
   }
 );
+SeoElement.displayName = "SeoElement";
 
 // ------------------------------------------------------------ //
 // FONT HANDLING
@@ -646,12 +647,21 @@ const createParticles = (
   ctx.imageSmoothingQuality = "high";
   ctx.imageSmoothingEnabled = true;
 
-  if ("fontKerning" in ctx) {
-    (ctx as any).fontKerning = "normal";
+  if (
+    "fontKerning" in
+    (ctx as CanvasRenderingContext2D & { fontKerning?: string })
+  ) {
+    (ctx as CanvasRenderingContext2D & { fontKerning?: string }).fontKerning =
+      "normal";
   }
 
-  if ("textRendering" in ctx) {
-    (ctx as any).textRendering = "geometricPrecision";
+  if (
+    "textRendering" in
+    (ctx as CanvasRenderingContext2D & { textRendering?: string })
+  ) {
+    (
+      ctx as CanvasRenderingContext2D & { textRendering?: string }
+    ).textRendering = "geometricPrecision";
   }
 
   // Calculate text boundaries

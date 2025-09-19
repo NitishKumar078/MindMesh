@@ -21,14 +21,6 @@ interface UseAutoResizeTextareaProps {
   maxHeight?: number;
 }
 
-interface faviconObject {
-  id: string;
-  hostname?: string;
-  url: string;
-  favicon: string;
-  success: boolean;
-}
-
 function useAutoResizeTextarea({
   minHeight,
   maxHeight,
@@ -145,7 +137,7 @@ interface ChatMessage {
 // }
 
 export function AnimatedAIChat() {
-  const AIProvider = localStorage.getItem("aiProvider");
+  const [AIProvider, setAIProvider] = useState<string | null>(null);
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -159,7 +151,9 @@ export function AnimatedAIChat() {
   });
   const [inputFocused, setInputFocused] = useState(false);
   const commandPaletteRef = useRef<HTMLDivElement>(null);
-  const [sourcesmap, setsourcesmap] = useState([]);
+  const [sourcesMap, setSourcesMap] = useState<
+    { id: number; hostname: string; url: string; favicon: string }[]
+  >([]);
 
   const commandSuggestions: CommandSuggestion[] = useMemo(
     () => [
@@ -184,6 +178,13 @@ export function AnimatedAIChat() {
     ],
     []
   );
+
+  useEffect(() => {
+    // hydrate client-only values
+    const provider =
+      typeof window !== "undefined" ? localStorage.getItem("aiProvider") : null;
+    setAIProvider(provider);
+  }, []);
 
   useEffect(() => {
     if (value.startsWith("/") && !value.includes(" ")) {
@@ -271,8 +272,14 @@ export function AnimatedAIChat() {
 
       try {
         // Get stored settings from localStorage
-        const provider = localStorage.getItem("aiProvider") || "Perplexity";
-        const apiKey = localStorage.getItem("aiApiKey");
+        const provider =
+          typeof window !== "undefined"
+            ? localStorage.getItem("aiProvider") || "Perplexity"
+            : "Perplexity";
+        const apiKey =
+          typeof window !== "undefined"
+            ? localStorage.getItem("aiApiKey")
+            : null;
 
         if (!apiKey) {
           alert("Please configure your API key in settings first.");
@@ -330,7 +337,7 @@ export function AnimatedAIChat() {
           })
         );
         console.log(sources);
-        setsourcesmap(sources);
+        setSourcesMap(sources);
 
         setMessages((prev) => [...prev, userMessage, aiMessage]);
       } catch (error) {
@@ -440,7 +447,7 @@ export function AnimatedAIChat() {
                       </span>
                       {message.role !== "user" && (
                         <div className="flex items-center">
-                          <AnimatedTooltip items={sourcesmap} />
+                          <AnimatedTooltip items={sourcesMap} />
                         </div>
                       )}
                     </div>
