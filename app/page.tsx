@@ -8,14 +8,14 @@ import { Component } from "@/components/ui/vapour-text-effect";
 
 export default function Home() {
   const { theme } = useTheme();
-  const [color, setColor] = useState("#ffffff");
+  const [color, setColor] = useState("#000000");
 
   useEffect(() => {
     setColor(theme === "dark" ? "#ffffff" : "#000000");
   }, [theme]);
 
   return (
-    <div className="relative flex h-screen w-full flex-col items-center justify-center  rounded-lg border bg-background md:shadow-xl">
+    <div className="relative flex h-full w-full flex-col items-center justify-center  rounded-lg border bg-background md:shadow-xl">
       <Particles
         className="fixed inset-0"
         quantity={100}

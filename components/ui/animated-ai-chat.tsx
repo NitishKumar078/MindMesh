@@ -343,8 +343,7 @@ export function AnimatedAIChat() {
       } catch (error) {
         console.error("Error sending message:", error);
         alert(
-          `Error: ${
-            error instanceof Error ? error.message : "Failed to send message"
+          `Error: ${error instanceof Error ? error.message : "Failed to send message"
           }`
         );
       } finally {
@@ -577,7 +576,7 @@ export function AnimatedAIChat() {
                     layoutId="button-highlight"
                   />
                 </motion.button> */}
-                <motion.button
+                {/* <motion.button
                   type="button"
                   data-command-button
                   onClick={(e) => {
@@ -588,15 +587,15 @@ export function AnimatedAIChat() {
                   className={cn(
                     "p-2 text-neutral-500 hover:text-neutral-900 dark:text-white/40 dark:hover:text-white/90 rounded-lg transition-colors relative group",
                     showCommandPalette &&
-                      "bg-black/10 text-neutral-900 dark:bg-white/10 dark:text-white/90"
+                    "bg-black/10 text-neutral-900 dark:bg-white/10 dark:text-white/90"
                   )}
-                >
-                  <Command className="w-4 h-4" />
-                  <motion.span
+                > */}
+                {/* <Command className="w-4 h-4" /> */}
+                {/* <motion.span
                     className="absolute inset-0 bg-white/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     layoutId="button-highlight"
                   />
-                </motion.button>
+                </motion.button> */}
               </div>
 
               <motion.button
