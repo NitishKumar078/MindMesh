@@ -13,11 +13,18 @@ interface ChatRequest {
   messages?: ChatMessage[];
 }
 
+/** Unified response shape returned by every provider handler */
+interface ProviderResult {
+  text: string;
+  citations?: string[];
+  icons?: object[];
+}
+
 async function callPerplexityAPI(
   message: string,
   apiKey: string,
   messages: ChatMessage[] = []
-) {
+): Promise<ProviderResult> {
   const model = "sonar-pro";
 
   const allMessages = [
@@ -40,23 +47,32 @@ async function callPerplexityAPI(
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
     throw new Error(
-      `Perplexity API error: ${response.status} ${response.statusText}`
+      `Perplexity API error: ${response.status} ${response.statusText} — ${errorText}`
     );
   }
 
   const data = await response.json();
-  // console.log(data.citations);
-  data.icons = await getFavicons(data.citations);
-  //return data.choices[0]?.message?.content || "No response received";
-  return data || "No response received";
+  const text: string =
+    data.choices?.[0]?.message?.content || "No response received";
+  const citations: string[] = data.citations ?? [];
+  let icons: object[] = [];
+  if (citations.length > 0) {
+    try {
+      icons = (await getFavicons(citations)) ?? [];
+    } catch {
+      icons = [];
+    }
+  }
+  return { text, citations, icons };
 }
 
 async function callOpenAIAPI(
   message: string,
   apiKey: string,
   messages: ChatMessage[] = []
-) {
+): Promise<ProviderResult> {
   const model = "gpt-3.5-turbo";
 
   const allMessages = [
@@ -79,22 +95,34 @@ async function callOpenAIAPI(
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
     throw new Error(
-      `OpenAI API error: ${response.status} ${response.statusText}`
+      `OpenAI API error: ${response.status} ${response.statusText} — ${errorText}`
     );
   }
 
   const data = await response.json();
-  return data.choices[0]?.message?.content || "No response received";
+  const text: string =
+    data.choices?.[0]?.message?.content || "No response received";
+  return { text, citations: [], icons: [] };
 }
 
 async function callGeminiAPI(
   message: string,
-  apiKey: string
-  // messages: ChatMessage[] = []
-) {
-  // Note: This is a simplified implementation. Gemini API structure may differ
-  const model = "gemini-pro";
+  apiKey: string,
+  messages: ChatMessage[] = []
+): Promise<ProviderResult> {
+  // gemini-2.0-flash is the current stable default
+  const model = "gemini-2.0-flash";
+
+  // Build multi-turn contents array for Gemini
+  const contents = [
+    ...messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    { role: "user", parts: [{ text: message }] },
+  ];
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -104,15 +132,7 @@ async function callGeminiAPI(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: message,
-              },
-            ],
-          },
-        ],
+        contents,
         generationConfig: {
           maxOutputTokens: 1000,
           temperature: 0.7,
@@ -122,15 +142,16 @@ async function callGeminiAPI(
   );
 
   if (!response.ok) {
+    const errorText = await response.text();
     throw new Error(
-      `Gemini API error: ${response.status} ${response.statusText}`
+      `Gemini API error: ${response.status} ${response.statusText} — ${errorText}`
     );
   }
 
   const data = await response.json();
-  return (
-    data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received"
-  );
+  const text: string =
+    data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received";
+  return { text, citations: [], icons: [] };
 }
 
 export async function POST(request: NextRequest) {
@@ -147,17 +168,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let response: string;
+    let result: ProviderResult;
 
     switch (provider) {
       case "Perplexity":
-        response = await callPerplexityAPI(message, apiKey, messages);
+        result = await callPerplexityAPI(message, apiKey, messages);
         break;
       case "OpenAI":
-        response = await callOpenAIAPI(message, apiKey, messages);
+        result = await callOpenAIAPI(message, apiKey, messages);
         break;
       case "Gemini":
-        response = await callGeminiAPI(message, apiKey);
+        result = await callGeminiAPI(message, apiKey, messages);
         break;
       default:
         return new Response(JSON.stringify({ error: "Unsupported provider" }), {
@@ -168,7 +189,9 @@ export async function POST(request: NextRequest) {
 
     return new Response(
       JSON.stringify({
-        response,
+        text: result.text,
+        citations: result.citations ?? [],
+        icons: result.icons ?? [],
         provider,
         timestamp: new Date().toISOString(),
       }),

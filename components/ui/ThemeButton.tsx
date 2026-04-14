@@ -2,34 +2,36 @@
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 export default function ThemeButton() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // useEffect only runs on the client, so now we can safely show the UI
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleThemeChange = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
+  if (!mounted) return null;
 
-  if (!mounted) {
-    return null;
-  }
+  const isDark = theme === "dark";
 
   return (
-    <button
-      onClick={handleThemeChange}
-      className="absolute border-black border border-l-2 top-4 right-4 z-10 cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    <motion.button
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      whileTap={{ scale: 0.92 }}
+      whileHover={{ scale: 1.05 }}
+      className="absolute top-4 right-4 z-50 cursor-pointer p-2.5 rounded-xl
+        bg-white/70 dark:bg-white/[0.07]
+        border border-neutral-200 dark:border-white/[0.1]
+        text-neutral-600 dark:text-white/70
+        hover:text-neutral-900 dark:hover:text-white
+        hover:bg-white dark:hover:bg-white/[0.12]
+        shadow-sm backdrop-blur-sm
+        transition-colors duration-200"
+      aria-label="Toggle theme"
     >
-      {theme === "dark" ? (
-        <Sun className="h-5 w-5" />
-      ) : (
-        <Moon className="h-5 w-5" />
-      )}
-    </button>
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </motion.button>
   );
 }
